@@ -21,10 +21,8 @@ class Server {
     //CORS
     this.app.use( cors() );
 
-    // LECTURA DE BODY
+    // READ BODY
     this.app.use( express.json() )
-    // CARPETA PÚBLICA 
-
   }
 
   routes() {

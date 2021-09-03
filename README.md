@@ -4,7 +4,7 @@
 
 #### Recordar ejecuar 
 
-##### npm install ´
+##### npm install
 
 #### Y compilar con 
 
