@@ -17,13 +17,18 @@ export const targetCoordinates = async ( req: Request, res: Response ) => {
       });
     }
     if ( body.protocols.length == 1) {
-      newScan = await  protocol( body.protocols[0], body.scan );
+      newScan = await  execProtocol( body.protocols[0], body.scan );
     }
 
     if( body.protocols.length > 1) {
       newScan = await typeOfProtocol(body.protocols, body.scan);
     }
-    newScan.forEach( (item: Scan ) => coordinates.push( item.coordinates ) );
+    newScan.forEach( (item: Scan) => {
+      const meters = item.coordinates.x + item.coordinates.y;
+      if ( meters <= 100 ) {
+        coordinates.push( item.coordinates ) 
+      }
+    });
     
     return res.status(200).json({
       ok: true,
@@ -34,46 +39,48 @@ export const targetCoordinates = async ( req: Request, res: Response ) => {
   }
 } 
 
-const protocol = async ( protocol: string, scan: Scan[] ):Promise<Scan[]> => {
+const execProtocol = async ( protocol: string, scan: Scan[] ):Promise<Scan[]> => {
   
   try {
-    const newScan: Scan[] = [];
+    let newScan: Scan[] = scan;
 
     switch (protocol) {
       case 'avoid-crossfire':
-        scan.forEach((item: Scan) => {
-          if (!item.allies) {
-            newScan.push(item)
+        newScan = scan.filter( item => {
+          if ( !item.allies) {
+            return item;
           }
         })
         break;
       case 'assist-allies':
-        scan.forEach((item: Scan) => {
+        scan.forEach((item: Scan, i: number) => {
           if (item.allies) {
-            newScan.push(item)
+            newScan.splice(i,1)
+            newScan.unshift(item)
           }
         })
         break;
       case 'furthest-enemies':
         scan.sort((a: Scan, b: Scan) => (b.coordinates.x + b.coordinates.y) - (a.coordinates.x + a.coordinates.y));
-        scan.forEach((item: Scan) => newScan.push(item));
         break;
       case 'closest-enemies':
         scan.sort((a: Scan, b: Scan) => (a.coordinates.x + a.coordinates.y) - (b.coordinates.x + b.coordinates.y));
-        scan.forEach((item: Scan) => newScan.push(item))
         break;
       case 'prioritize-mech':
-        const existMech = scan.find((item: Scan) => item.enemies.type == 'mech');
+        let i = 0;
+        const existMech = scan.find((item: Scan, j: number) => {
+          i = j
+          return item.enemies.type == 'mech'
+        });
         if (existMech) {
-          newScan.push(existMech)
-        } else {
-          newScan.push(scan[0]);
-        }
+          newScan.splice(i,1);
+          newScan.unshift(existMech)
+        } 
         break;
       case 'avoid-mech':
-        scan.forEach((item: Scan) => {
-          if (item.enemies.type != 'mech') {
-            newScan.push(item)
+        newScan = scan.filter( item => {
+          if ( item.enemies.type != 'mech') {
+            return item;
           }
         })
         break;
@@ -91,8 +98,13 @@ const protocol = async ( protocol: string, scan: Scan[] ):Promise<Scan[]> => {
 const typeOfProtocol = async ( protocols: string[], scan:Scan[] ):Promise<Scan[]> => {
   let newScan: Scan[] = scan;
 
+  protocols.sort(() => -1);
+  if ( protocols.includes('prioritize-mech')) {
+    protocols.shift();
+    protocols.push('prioritize-mech')
+  }
   for (let i = 0; i < protocols.length; i++) {
-     newScan = await protocol( protocols[i], newScan );
+     newScan = await execProtocol( protocols[i], newScan );
   }
   return newScan;
 }

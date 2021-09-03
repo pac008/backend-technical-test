@@ -26,7 +26,7 @@ API_ENDPOINT=${API_ENDPOINT:=$DEFAULT_ENDPOINT}
                 -H "Content-Type: application/json" \
                 -X POST \
                 -d "$INPUT" \
-                "$API_ENDPOINT/radar"
+                "$API_ENDPOINT/api/droid/radar"
             )
 
             if [ "$EXPECTED" == "$OUTPUT" ] || [ "$EXPECTED_ALT" == "$OUTPUT" ]
